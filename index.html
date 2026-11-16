@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Coil Split Lab</title>
+<style>
+/* Layout idea: a luthier's notebook page. Controls on the left, the response curve and comparison ledger on the right; one column on phones. */
+:root {
+  --bg: #d9c7a1; --page: #efe2c4; --panel: rgba(255,248,230,0.55);
+  --ink: #3a2816; --ink2: #6e5436; --ink3: #8f7656; --line: #b89a6c; --grid: rgba(70,50,25,0.22);
+  --accent: #9b3a20; --accent-soft: rgba(155,58,32,0.12); --on-accent: #f6ecd3;
+  --good: #3f6b2a; --warn: #a0521c;
+  --c1: #2f6f73; --c2: #6b6a1e; --c3: #4a4f8a; --c4: #7a3c6a;
+  --display: "Iowan Old Style", "Palatino", "Palatino Linotype", "Book Antiqua", Georgia, serif;
+  --body: "Palatino", "Palatino Linotype", "Book Antiqua", "Iowan Old Style", Georgia, serif;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #1c0f08; --page: #2b170c; --panel: rgba(255,214,150,0.05);
+    --ink: #f1e3c6; --ink2: #cdb38a; --ink3: #a68a62; --line: #7a5432; --grid: rgba(240,214,170,0.16);
+    --accent: #e3a44c; --accent-soft: rgba(227,164,76,0.14); --on-accent: #22120a;
+    --good: #9fc77a; --warn: #f08a5d;
+    --c1: #6fb3b0; --c2: #c9bb5c; --c3: #9aa0e0; --c4: #d38fc0;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #1c0f08; --page: #2b170c; --panel: rgba(255,214,150,0.05);
+  --ink: #f1e3c6; --ink2: #cdb38a; --ink3: #a68a62; --line: #7a5432; --grid: rgba(240,214,170,0.16);
+  --accent: #e3a44c; --accent-soft: rgba(227,164,76,0.14); --on-accent: #22120a;
+  --good: #9fc77a; --warn: #f08a5d;
+  --c1: #6fb3b0; --c2: #c9bb5c; --c3: #9aa0e0; --c4: #d38fc0;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body { background: var(--bg); color: var(--ink); font-family: var(--body); font-size: 16px; line-height: 1.5; padding: 16px; }
+.sheet { max-width: 1180px; margin: 0 auto; background: var(--page); border: 1px solid var(--line); border-radius: 4px; padding: 24px clamp(16px, 3vw, 36px) 20px; box-shadow: inset 0 0 60px rgba(110,80,40,0.18), 0 4px 18px rgba(40,25,10,0.3); }
+header h1 { font-family: var(--display); font-style: italic; font-weight: 600; font-size: clamp(1.7rem, 3.4vw, 2.3rem); margin: 0; text-wrap: balance; }
+header p { margin: 4px 0 0; color: var(--ink2); max-width: 68ch; }
+.layout { display: grid; gap: 24px; margin-top: 20px; }
+@media (min-width: 920px) { .layout { grid-template-columns: 340px 1fr; } }
+.controls { display: flex; flex-direction: column; gap: 18px; }
+fieldset { border: 1px solid var(--line); border-radius: 4px; margin: 0; padding: 10px 14px 14px; background: var(--panel); }
+legend { font-family: var(--display); font-style: italic; font-size: 1.05rem; padding: 0 6px; color: var(--ink); }
+label, .lbl { display: block; font-size: 0.9rem; color: var(--ink2); margin-bottom: 4px; }
+select, input[type="number"] { font: inherit; font-size: 0.95rem; color: var(--ink); background: var(--page); border: 1px solid var(--line); border-radius: 3px; padding: 5px 7px; width: 100%; }
+input[type="range"] { width: 100%; accent-color: var(--accent); }
+.row { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-top: 10px; align-items: end; }
+.row > div { min-width: 0; }
+.est { font-size: 0.75rem; color: var(--warn); font-style: italic; }
+.seg { display: flex; flex-wrap: wrap; gap: 6px; }
+.seg button { font: inherit; font-size: 0.88rem; padding: 6px 10px; border-radius: 3px; border: 1px solid var(--line); background: transparent; color: var(--ink); cursor: pointer; }
+.seg button[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+.seg button:focus-visible, .btn:focus-visible, select:focus-visible, input:focus-visible, summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.val { font-variant-numeric: tabular-nums; color: var(--ink); font-weight: 600; float: right; }
+.sub { margin-top: 12px; }
+.hidden { display: none !important; }
+.tiles { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+@media (max-width: 640px) { .tiles { grid-template-columns: repeat(2, 1fr); } }
+.tile { border-bottom: 1px solid var(--accent); padding: 4px 2px 8px; }
+.tile .k { font-size: 0.8rem; color: var(--ink2); }
+.tile .v { font-family: var(--display); font-size: 1.45rem; font-variant-numeric: tabular-nums; line-height: 1.2; }
+.tile .n { font-size: 0.78rem; color: var(--ink3); }
+.pill { display: inline-block; font-size: 0.72rem; padding: 1px 7px; border-radius: 10px; border: 1px solid currentColor; vertical-align: 2px; margin-left: 4px; }
+.good { color: var(--good); } .warn { color: var(--warn); }
+.graph-wrap { margin-top: 14px; border: 1px solid var(--line); border-radius: 4px; background: var(--panel); padding: 8px; }
+.graph-title { font-family: var(--display); font-style: italic; margin: 2px 4px 6px; display: flex; justify-content: space-between; flex-wrap: wrap; gap: 6px; }
+.legend { font-family: var(--body); font-style: normal; font-size: 0.8rem; color: var(--ink2); display: flex; gap: 12px; flex-wrap: wrap; }
+.legend span::before { content: ""; display: inline-block; width: 18px; height: 0; border-top: 2px solid var(--sw); vertical-align: middle; margin-right: 5px; }
+.legend .dash::before { border-top-style: dashed; } .legend .dot::before { border-top-style: dotted; }
+canvas { display: block; width: 100%; height: 340px; }
+.actions { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin-top: 12px; }
+.btn { font: inherit; font-size: 0.9rem; padding: 7px 14px; border-radius: 3px; border: 1px solid var(--accent); background: var(--accent); color: var(--on-accent); cursor: pointer; }
+.btn.ghost { background: transparent; color: var(--accent); }
+.hint { font-size: 0.82rem; color: var(--ink3); }
+.ledger { width: 100%; border-collapse: collapse; font-size: 0.88rem; font-variant-numeric: tabular-nums; }
+.ledger-wrap { overflow-x: auto; margin-top: 10px; }
+.ledger th { text-align: left; font-weight: 600; color: var(--ink2); border-bottom: 1px solid var(--line); padding: 6px 8px; white-space: nowrap; }
+.ledger td { border-bottom: 1px dotted var(--line); padding: 6px 8px; white-space: nowrap; }
+.ledger td.what { white-space: normal; min-width: 180px; }
+.sw { display: inline-block; width: 14px; height: 3px; vertical-align: middle; margin-right: 6px; }
+.x { font: inherit; background: none; border: none; color: var(--ink3); cursor: pointer; font-size: 1rem; }
+.notes { margin-top: 20px; display: grid; gap: 16px; align-items: start; }
+@media (min-width: 920px) { .notes { grid-template-columns: 1fr 1fr; } }
+.card { border: 1px solid var(--line); border-radius: 4px; padding: 12px 16px; background: var(--panel); }
+.card h2 { font-family: var(--display); font-style: italic; font-weight: 600; font-size: 1.15rem; margin: 0 0 6px; }
+.card p, .card li { max-width: 65ch; }
+.card p { margin: 6px 0; }
+.card ul { margin: 6px 0; padding-left: 20px; }
+details summary { cursor: pointer; font-family: var(--display); font-style: italic; font-size: 1.05rem; }
+footer { margin-top: 22px; font-size: 0.8rem; color: var(--ink3); text-align: center; }
+h3.sec { font-family: var(--display); font-style: italic; font-weight: 600; font-size: 1.1rem; margin: 18px 0 0; }
+</style>
+</head>
+<body>
+<div class="sheet">
+<header>
+  <h1>Coil Split Lab</h1>
+  <p>Compare the ways to split a humbucker: a hard short, a resistor, a capacitor, or both. See how each one changes the tone curve, the output, and how much 60 Hz hum the pickup still cancels.</p>
+</header>
+<div class="layout">
+<div class="controls">
+  <fieldset>
+    <legend>Pickup</legend>
+    <label for="preset">Type</label>
+    <select id="preset">
+      <option value="paf">Vintage / PAF style (about 8k)</option>
+      <option value="med">Medium output (about 13k)</option>
+      <option value="hot" selected>High output (about 16k)</option>
+      <option value="hyb">Hybrid, mismatched coils (about 11k)</option>
+      <option value="custom">My pickup's values</option>
+    </select>
+    <div class="row">
+      <div><label for="rA" id="rAlbl">Coil 1 R (kΩ)</label><input type="number" id="rA" step="0.1" min="0.5" max="20"></div>
+      <div><label for="rB" id="rBlbl">Coil 2 R (kΩ)</label><input type="number" id="rB" step="0.1" min="0.5" max="20"></div>
+      <div><label for="lT">Series L (H)</label><input type="number" id="lT" step="0.1" min="0.5" max="20"></div>
+    </div>
+    <div class="est" id="estNote"></div>
+  </fieldset>
+  <fieldset>
+    <legend>Split method</legend>
+    <div class="seg" id="method" role="group" aria-label="Split method">
+      <button type="button" data-m="off">Humbucker</button>
+      <button type="button" data-m="short">Hard short</button>
+      <button type="button" data-m="r">Resistor</button>
+      <button type="button" data-m="c">Capacitor</button>
+      <button type="button" data-m="rc">R + C in series</button>
+      <button type="button" data-m="rpc">R ∥ C</button>
+    </div>
+    <div class="sub" id="keepBox">
+      <span class="lbl">Coil that stays on</span>
+      <div class="seg" id="keep" role="group" aria-label="Coil that stays on">
+        <button type="button" data-k="A" id="keepA">Coil 1</button>
+        <button type="button" data-k="B" id="keepB">Coil 2</button>
+      </div>
+    </div>
+    <div class="sub" id="rBox">
+      <label for="rSl">Resistor <span class="val" id="rVal"></span></label>
+      <input type="range" id="rSl" min="0" max="0" step="1">
+    </div>
+    <div class="sub" id="cBox">
+      <label for="cSl">Capacitor <span class="val" id="cVal"></span></label>
+      <input type="range" id="cSl" min="0" max="0" step="1">
+    </div>
+  </fieldset>
+  <fieldset>
+    <legend>Pickup height</legend>
+    <div class="seg" id="height" role="group" aria-label="Pickup height">
+      <button type="button" data-h="low">Low</button>
+      <button type="button" data-h="mid">Mid</button>
+      <button type="button" data-h="high">High</button>
+    </div>
+    <p class="hint" style="margin:8px 0 0">Height moves the string signal but not the hum, so it changes the signal-to-hum ratio. Coarse and illustrative.</p>
+  </fieldset>
+  <fieldset>
+    <legend>Guitar and cable</legend>
+    <div class="row">
+      <div><label for="pot">Pots (kΩ)</label><select id="pot"><option value="250">250k</option><option value="500" selected>500k</option><option value="1000">1M</option></select></div>
+      <div><label for="tcap">Tone cap</label><select id="tcap"><option value="0.015">.015 µF</option><option value="0.022" selected>.022 µF</option><option value="0.047">.047 µF</option></select></div>
+      <div><label for="cable">Cable (ft)</label><input type="number" id="cable" value="10" min="1" max="40" step="1"></div>
+    </div>
+    <p class="hint" style="margin:8px 0 0">Volume and tone on 10. Cable at about 53 pF per foot, into a 1 MΩ amp input.</p>
+  </fieldset>
+</div>
+<div>
+  <div class="tiles" aria-live="polite">
+    <div class="tile"><div class="k">Output at 1 kHz</div><div class="v" id="tOut">–</div><div class="n">vs. full humbucker</div></div>
+    <div class="tile"><div class="k">Resonant peak</div><div class="v" id="tPk">–</div><div class="n" id="tPkN">frequency and height</div></div>
+    <div class="tile"><div class="k">60 Hz hum</div><div class="v" id="tHum">–</div><div class="n">0 dB = one coil alone</div></div>
+    <div class="tile"><div class="k">Signal to hum</div><div class="v" id="tSnr">–</div><div class="n">vs. humbucker, mid height</div></div>
+  </div>
+  <div class="graph-wrap">
+    <div class="graph-title"><span id="gTitle">Tone curve</span>
+      <span class="legend" id="legend"></span></div>
+    <canvas id="g" role="img" aria-label="Frequency response of the current split setting compared with the full humbucker and a hard split"></canvas>
+  </div>
+  <div class="actions">
+    <button class="btn" id="pin" type="button">Add to comparison</button>
+    <button class="btn ghost" id="clear" type="button">Clear comparison</button>
+    <span class="hint" id="pinHint">Pin up to four settings to compare them on the graph.</span>
+  </div>
+  <div class="ledger-wrap">
+    <table class="ledger" id="ledger">
+      <thead><tr><th>Setting</th><th>1 kHz</th><th>Peak</th><th>60 Hz hum</th><th>Signal to hum</th><th></th></tr></thead>
+      <tbody></tbody>
+    </table>
+  </div>
+  <h3 class="sec" id="mTitle"></h3>
+  <div id="mText"></div>
+</div>
+</div>
+<div class="notes">
+  <div class="card">
+    <h2>Getting rid of 60 Hz hum</h2>
+    <p>A humbucker's two coils pick up the string in phase but pick up hum out of phase, so the hum cancels. Any split that takes one coil out at 60 Hz brings the hum back.</p>
+    <ul>
+      <li><b>Hard short</b> gives the full single-coil hum.</li>
+      <li><b>A resistor</b> leaves part of the second coil working, so part of the cancelling survives. Higher values keep more.</li>
+      <li><b>A capacitor</b> barely conducts at 60 Hz, so the coils keep cancelling hum while the top end splits. Buzz harmonics above the split point are not cancelled.</li>
+      <li><b>Raising the pickup</b> lifts the signal without lifting the hum, which helps a split position.</li>
+    </ul>
+  </div>
+  <details class="card">
+    <summary>How this model works</summary>
+    <p>Each coil is a resistance and an inductance, and the two coils are magnetically coupled (coupling factor 0.3, an estimate). The split part sits across the coil that turns off. The load is the volume and tone pots, the tone cap, the cable, a 1 MΩ amp input and about 120 pF of pickup capacitance.</p>
+    <p>Hum is modeled as an equal outside field through both coils, cancelling to within 5% on a matched pair. Mismatched coils, as in a hybrid, cancel less. Coil turns are estimated from resistance.</p>
+    <p>The model has no eddy-current losses, so resonances (especially the cap-split bump) may look sharper than a real pickup's. Values marked as estimates should be replaced with measured ones. The model will be checked against a breadboard before it goes into the main simulator.</p>
+  </details>
+</div>
+<footer>© 2026 G$ Luthier Services. All rights reserved. · Coil Split Lab preview, build 2026.11.16-1</footer>
+</div>
+<script>
+/* Guitar Tone Filter Simulator. (c) 2026 G$ Luthier Services. All rights reserved. Unauthorized copying or redistribution is prohibited. */
+(function(){"use strict";function _a(_b,_c){return{re:_b,im:_c||0};}function _d(_e,_f){return _a(_e.re+_f.re,_e.im+_f.im);}function _g(_e,_f){return _a(_e.re-_f.re,_e.im-_f.im);}function _h(_e,_f){return _a(_e.re*_f.re-_e.im*_f.im,_e.re*_f.im+_e.im*_f.re);}function _i(_e,_f){var _j=_f.re*_f.re+_f.im*_f.im;return _a((_e.re*_f.re+_e.im*_f.im)/_j,(_e.im*_f.re-_e.re*_f.im)/_j);}function _k(_e){return _i(_a(1),_e);}function _l(_e){return Math.hypot(_e.re,_e.im);}var _m={paf:{rA:4.1,rB:4.1,L:4.5,est:"Typical values for this type. For your own pickup, type in its spec sheet or measured values."},med:{rA:6.5,rB:6.5,L:6.0,est:"Typical values for this type. For your own pickup, type in its spec sheet or measured values."},hot:{rA:8.3,rB:8.3,L:8.0,est:"Typical values for this type. For your own pickup, type in its spec sheet or measured values."},hyb:{rA:4.1,rB:7.1,L:5.0,est:"Typical values for a hybrid with one vintage coil and one hotter coil. For your own pickup, type in its values."},custom:{rA:4.1,rB:4.1,L:4.5,est:"Spec sheets usually list total resistance only: split it evenly unless the coils differ. Measured inductance is best; if you don't have it, keep the typical value."}};var _n=[100,150,220,330,470,680,1000,1500,2200,3300,4700,6800,10000,15000,22000];var _o=[1e-9,1.5e-9,2.2e-9,3.3e-9,4.7e-9,6.8e-9,10e-9,15e-9,22e-9,33e-9,47e-9,68e-9,100e-9,150e-9,220e-9,330e-9,470e-9];var _p={low:0.5,mid:1.0,high:1.6};var _q=0.3,_r=0.95,_s=120e-12,_t=1e6,_u=53e-12;var _v=[];for(var _w=0;_w<240;_w++)_v.push(20*Math.pow(1000,_w/239));var _x="Screw coil",_y="Slug coil";var _z={preset:"hot",method:"r",keep:"A",h:"mid",rIdx:8,cIdx:8,pins:[]};function _C(_D){var _E=_z.keep==="A"?_D.rA:_D.rB,_F=_z.keep==="A"?_D.rB:_D.rA;var _G=Math.sqrt(_E),_H=Math.sqrt(_F);var _I=_D.L/(_G*_G+_H*_H+2*_q*_G*_H);var _J=_I*_G*_G,_K=_I*_H*_H;return{R1:_E*1e3,R2:_F*1e3,L1:_J,L2:_K,M:_q*Math.sqrt(_J*_K),n1:_G,n2:_H};}function _L(_M,_N){var _O=_a(1/_N.pot+1/_t,_M*(_s+_N.cable));_O=_d(_O,_k(_a(_N.pot,-1/(_M*_N.tcap))));return _O;}function _P(_M,_A,_Q,_R){switch(_A){case"off":return null;case"short":return _a(1e6);case"r":return _a(1/_Q);case"c":return _a(0,_M*_R);case"rc":return _k(_a(_Q,-1/(_M*_R)));case"rpc":return _a(1/_Q,_M*_R);}}function _S(_T,_U,_N,_A,_Q,_R,_V,_W){var _M=2*Math.PI*_T;var _X=_a(_U.R1,_M*_U.L1),_Y=_a(_U.R2,_M*_U.L2),_Z=_a(0,_M*_U.M),_aa=_L(_M,_N);var _ba=_P(_M,_A,_Q,_R);if(!_ba)return _i(_a(_V+_W),_d(_a(1),_h(_d(_d(_X,_Y),_h(_a(2),_Z)),_aa)));var _ca=_d(_a(1),_h(_Y,_ba));var _e=_i(_a(_W),_ca),_f=_i(_h(_d(_Y,_Z),_aa),_ca),_da=_g(_a(1),_h(_Z,_ba));var _ea=_d(_a(_V),_h(_da,_e));var _fa=_d(_d(_a(1),_h(_d(_X,_Z),_aa)),_h(_da,_f));return _i(_ea,_fa);}function _ga(_ha){var _U=_ha.pk,_N=_ha.g,_ia=_p[_ha.h];var _ja=function(_T,_ka,_B){return _l(_S(_T,_U,_N,_ka,_ha.R,_ha.Cv,_B*_U.n1,_B*_U.n2));};var _la=function(_ka){return _l(_S(60,_U,_N,_ka,_ha.R,_ha.Cv,_U.n1,-_r*_U.n2));};var _ma=_ja(100,"off",1);var _na=_v.map(function(_T){return 20*Math.log10(_ja(_T,_ha.method,_ia)/_ma);});var _oa=20*Math.log10(_ja(1000,_ha.method,_ia)/_ma);var _pa=-1,_qa=-1e9;for(var _w=0;_w<_v.length;_w++)if(_v[_w]>400&&_na[_w]>_qa){_qa=_na[_w];_pa=_w;}var _ra=_pa>0&&_pa<_v.length-1&&_qa>_na[_pa-1]&&_qa>_na[_pa+1];var _sa=_la(_ha.method),_ta=_la("short");var _ua=20*Math.log10(_sa/_ta);var _va=20*Math.log10(_ja(1000,_ha.method,_ia)/_sa);var _wa=20*Math.log10(_ja(1000,"off",1)/_la("off"));return{curve:_na,out1k:_oa,peakF:_ra?_v[_pa]:null,peakDb:_ra?_qa-_oa:null,humDb:_ua,snr:_va-_wa};}window.__coilModel={vout:_S,analyze:_ga,pickup:_C,PRESETS:_m,st:_z,FREQS:_v,HEIGHT:_p};function _xa(_ya){return _ya>=1000?(_ya/1000).toString().replace(/\.0 _za/,"")+"k":_ya+" Ω";}function _Aa(_I){return _I>=1e-6?(_I*1e6)+" µF":(_I>=1e-9?+(_I*1e9).toFixed(1)+" nF":(_I*1e12)+" pF");}function _Ba(_Ca){return(_Ca>=0?"+":"−")+Math.abs(_Ca).toFixed(1)+" dB";}function _Da(_T){return _T>=1000?(_T/1000).toFixed(_T>=10000?0:1)+" kHz":Math.round(_T)+" Hz";}var _za=function(_Ea){return document.getElementById(_Ea);};var _Fa={rA:_za("rA"),rB:_za("rB"),lT:_za("lT"),rSl:_za("rSl"),cSl:_za("cSl")};_Fa.rSl.max=_n.length-1;_Fa.cSl.max=_o.length-1;var _Ga={off:["Full humbucker","Both coils in series. The most output, the thickest mids and the lowest resonant peak, with the hum cancelled. This is the reference every other setting is compared to."],short:["Hard short to ground","One coil is shorted out, so you hear a true single coil: less output, a higher and brighter resonant peak, and the full single-coil hum. The shorted coil still sits next to the one that is on, so it shifts the sound slightly compared with a real single coil."],r:["Resistor to ground (partial split)","The resistor only partly shorts the second coil, so some of it still contributes. Low values sound close to a hard short; high values sound close to the humbucker. You keep some output and some hum cancelling, and the jump in volume when you pull the knob is smaller. Common values run from about 1k to 4.7k."],c:["Capacitor to ground","The cap acts as an open circuit at low frequencies and a short at high frequencies. At 60 Hz both coils still work, so the hum stays cancelled and the lows stay full; the top end opens up like a single coil. A smaller cap starts the split at a higher frequency. Buzz harmonics above the split point are not cancelled. Watch for a bump in the curve: the cap and the switched-off coil form their own resonance, which the model shows clearly. A real pickup's losses should soften it, and the breadboard will tell us how much."],rc:["Resistor and capacitor in series","The cap keeps the hum cancelling at 60 Hz, and the resistor limits how far the split goes at high frequencies. The result is a gentle, frequency-dependent partial split: a little more sparkle and clarity without losing the humbucker's body or its hum rejection."],rpc:["Resistor in parallel with a capacitor","The resistor gives a partial split at every frequency, including 60 Hz, and the cap makes the split complete at high frequencies. The lows sound like a partial split, the highs like a full single coil."]};function _Ha(){var _j=_m[_z.preset];var _D={rA:+_Fa.rA.value||_j.rA,rB:+_Fa.rB.value||_j.rB,L:+_Fa.lT.value||_j.L};var _N={pot:(+_za("pot").value)*1e3,tcap:(+_za("tcap").value)*1e-6,cable:Math.max(0,+_za("cable").value||0)*_u};return{pk:_C(_D),g:_N,method:_z.method,h:_z.h,R:_n[_z.rIdx],Cv:_o[_z.cIdx]};}function _Ia(){var _Ja=_z.keep==="A"?_x:_y;var _ka=_z.method,_Ka={off:"Humbucker",short:"Hard short",r:_xa(_n[_z.rIdx]),c:_Aa(_o[_z.cIdx]),rc:_xa(_n[_z.rIdx])+" + "+_Aa(_o[_z.cIdx]),rpc:_xa(_n[_z.rIdx])+" ∥ "+_Aa(_o[_z.cIdx])}[_ka];var _La=_ka==="off"?"":", "+_Ja+" on";var _Ma={paf:"Vintage",med:"Medium",hot:"High output",hyb:"Hybrid",custom:"My pickup"}[_z.preset];return _Ma+": "+_Ka+_La+(_z.h!=="mid"?", "+_z.h+" height":"");}function _Na(){var _Oa=_m[_z.preset];_za("rAlbl").textContent=_x+" (kΩ)";_za("rBlbl").textContent=_y+" (kΩ)";_za("keepA").textContent=_x;_za("keepB").textContent=_y;_za("estNote").textContent=_Oa.est;[].forEach.call(document.querySelectorAll("#method button"),function(_f){_f.setAttribute("aria-pressed",_f.dataset.m===_z.method);});[].forEach.call(document.querySelectorAll("#keep button"),function(_f){_f.setAttribute("aria-pressed",_f.dataset.k===_z.keep);});[].forEach.call(document.querySelectorAll("#height button"),function(_f){_f.setAttribute("aria-pressed",_f.dataset.h===_z.h);});_za("keepBox").classList.toggle("hidden",_z.method==="off");_za("rBox").classList.toggle("hidden",["r","rc","rpc"].indexOf(_z.method)<0);_za("cBox").classList.toggle("hidden",["c","rc","rpc"].indexOf(_z.method)<0);_Fa.rSl.value=_z.rIdx;_Fa.cSl.value=_z.cIdx;_za("rVal").textContent=_xa(_n[_z.rIdx]);_za("cVal").textContent=_Aa(_o[_z.cIdx]);_za("mTitle").textContent=_Ga[_z.method][0];_za("mText").innerHTML="<p style='max-width:65ch;margin:4px 0 0'>"+_Ga[_z.method][1]+"</p>";}var _Pa=null;function _Qa(){_Na();var _ha=_Ha();var _e=_ga(_ha);var _Ra=_ga(Object.assign({},_ha,{method:"off",h:"mid"}));var _Sa=_ga(Object.assign({},_ha,{method:"short",h:"mid"}));_Pa={a:_e,label:_Ia()};_za("tOut").textContent=_Ba(_e.out1k);_za("tPk").textContent=_e.peakF?_Da(_e.peakF):"none";_za("tPkN").textContent=_e.peakF?_Ba(_e.peakDb)+" above 1 kHz level":"curve rolls off smoothly";var _Ta=_e.humDb<-15?"good":(_e.humDb>-6?"warn":"");_za("tHum").innerHTML=_Ba(_e.humDb)+(_Ta?" <span class='pill "+_Ta+"'>"+(_Ta==="good"?"quiet":"hum")+"</span>":"");_za("tSnr").textContent=_Ba(_e.snr);_Ua(_e,_Ra,_Sa);}var _Va=_za("g"),_Wa=_Va.getContext("2d");function _Xa(_Ya){return getComputedStyle(document.documentElement).getPropertyValue(_Ya).trim();}function _Ua(_e,_Za,_ab){var _bb=window.devicePixelRatio||1,_cb=_Va.clientWidth,_db=_Va.clientHeight;_Va.width=_cb*_bb;_Va.height=_db*_bb;_Wa.setTransform(_bb,0,0,_bb,0,0);_Wa.clearRect(0,0,_cb,_db);var _eb=44,_fb=10,_gb=10,_hb=26,_ib=_eb,_jb=_cb-_fb,_kb=_gb,_lb=_db-_hb;var _mb=_e.curve.concat(_Za.curve,_ab.curve);_z.pins.forEach(function(_D){_mb=_mb.concat(_D.a.curve);});var _nb=Math.ceil(Math.max.apply(null,_mb)/6)*6+0,_ob=Math.max(-42,Math.floor(Math.min.apply(null,_mb)/6)*6);if(_nb-_ob<24)_ob=_nb-24;var _pb=function(_T){return _ib+(_jb-_ib)*Math.log(_T/20)/Math.log(1000);};var _qb=function(_j){return _kb+(_lb-_kb)*(_nb-_j)/(_nb-_ob);};_Wa.font="12px "+_Xa("--body");_Wa.fillStyle=_Xa("--ink2");_Wa.strokeStyle=_Xa("--grid");_Wa.lineWidth=1;[20,50,100,200,500,1000,2000,5000,10000,20000].forEach(function(_T){var _rb=_pb(_T);_Wa.beginPath();_Wa.moveTo(_rb,_kb);_Wa.lineTo(_rb,_lb);_Wa.stroke();_Wa.textAlign=_T===20?"left":(_T===20000?"right":"center");_Wa.fillText(_T>=1000?_T/1000+"k":_T,_rb,_db-8);});_Wa.textAlign="right";for(var _j=_ob;_j<=_nb;_j+=6){var _O=_qb(_j);_Wa.beginPath();_Wa.moveTo(_ib,_O);_Wa.lineTo(_jb,_O);_Wa.stroke();_Wa.fillText(_j+" dB",_ib-5,_O+4);}_Wa.save();_Wa.strokeStyle=_Xa("--warn");_Wa.setLineDash([2,3]);var _sb=_pb(60);_Wa.beginPath();_Wa.moveTo(_sb,_kb);_Wa.lineTo(_sb,_lb);_Wa.stroke();_Wa.restore();_Wa.fillStyle=_Xa("--warn");_Wa.textAlign="left";_Wa.fillText("60 Hz hum",_sb+4,_kb+12);function _tb(_I,_ub,_M,_vb){_Wa.save();_Wa.strokeStyle=_ub;_Wa.lineWidth=_M;_Wa.setLineDash(_vb||[]);_Wa.beginPath();_I.forEach(function(_Ca,_w){var _rb=_pb(_v[_w]),_O=_qb(Math.max(_ob,_Ca));_w?_Wa.lineTo(_rb,_O):_Wa.moveTo(_rb,_O);});_Wa.stroke();_Wa.restore();}_tb(_Za.curve,_Xa("--ink3"),1.5,[7,4]);_tb(_ab.curve,_Xa("--ink3"),1.5,[1.5,3]);_z.pins.forEach(function(_D){_tb(_D.a.curve,_Xa(_D.color),2);});_tb(_e.curve,_Xa("--accent"),3);var _wb="<span style='--sw:"+_Xa("--accent")+"'>Current</span><span class='dash' style='--sw:"+_Xa("--ink3")+"'>Humbucker</span><span class='dot' style='--sw:"+_Xa("--ink3")+"'>Hard split</span>";_za("legend").innerHTML=_wb;}var _xb=["--c1","--c2","--c3","--c4"];function _yb(){var _zb=document.querySelector("#ledger tbody");_zb.innerHTML="";if(!_z.pins.length){_zb.innerHTML="<tr><td colspan='6' class='what' style='color:var(--ink3)'>Nothing pinned yet. Try pinning a hard short, a 2.2k resistor and a 22 nF cap, then compare the hum column.</td></tr>";}_z.pins.forEach(function(_D,_w){var _Ab=document.createElement("tr");_Ab.innerHTML="<td class='what'><span class='sw' style='background:"+_Xa(_D.color)+"'></span>"+_D.label+"</td><td>"+_Ba(_D.a.out1k)+"</td><td>"+(_D.a.peakF?_Da(_D.a.peakF):"none")+"</td><td>"+_Ba(_D.a.humDb)+"</td><td>"+_Ba(_D.a.snr)+"</td><td><button class='x' type='button' aria-label='Remove "+_D.label+"' data-i='"+_w+"'>×</button></td>";_zb.appendChild(_Ab);});_za("pin").disabled=_z.pins.length>=4;_za("pinHint").textContent=_z.pins.length>=4?"Four pinned. Remove one to add another.":"Pin up to four settings to compare them on the graph.";}_za("pin").addEventListener("click",function(){if(_z.pins.length>=4||!_Pa)return;var _Bb=_z.pins.map(function(_D){return _D.color;});var _ub=_xb.filter(function(_I){return _Bb.indexOf(_I)<0;})[0];_z.pins.push({a:_Pa.a,label:_Pa.label,color:_ub});_yb();_Qa();});_za("clear").addEventListener("click",function(){_z.pins=[];_yb();_Qa();});document.querySelector("#ledger tbody").addEventListener("click",function(_Cb){var _f=_Cb.target.closest("button[data-i]");if(!_f)return;_z.pins.splice(+_f.dataset.i,1);_yb();_Qa();});function _Db(){if(_z.preset==="custom")return;var _D=_m[_z.preset];_Fa.rA.value=_D.rA;_Fa.rB.value=_D.rB;_Fa.lT.value=_D.L;}_za("preset").addEventListener("change",function(){_z.preset=this.value;_Db();_Qa();});[_Fa.rA,_Fa.rB,_Fa.lT].forEach(function(_w){_w.addEventListener("input",function(){if(_z.preset!=="custom"){_z.preset="custom";_za("preset").value="custom";}_Qa();});});_za("cable").addEventListener("input",_Qa);[_za("pot"),_za("tcap")].forEach(function(_w){_w.addEventListener("change",_Qa);});document.getElementById("method").addEventListener("click",function(_Cb){var _f=_Cb.target.closest("button");if(_f){_z.method=_f.dataset.m;_Qa();}});document.getElementById("keep").addEventListener("click",function(_Cb){var _f=_Cb.target.closest("button");if(_f){_z.keep=_f.dataset.k;_Qa();}});document.getElementById("height").addEventListener("click",function(_Cb){var _f=_Cb.target.closest("button");if(_f){_z.h=_f.dataset.h;_Qa();}});_Fa.rSl.addEventListener("input",function(){_z.rIdx=+this.value;_Qa();});_Fa.cSl.addEventListener("input",function(){_z.cIdx=+this.value;_Qa();});window.addEventListener("resize",_Qa);if(window.matchMedia){var _Eb=window.matchMedia("(prefers-color-scheme: dark)");if(_Eb.addEventListener)_Eb.addEventListener("change",function(){_yb();_Qa();});}_Db();_yb();_Qa();})();
+</script>
+</body>
+</html>
