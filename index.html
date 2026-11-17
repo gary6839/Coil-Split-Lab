@@ -104,6 +104,7 @@ canvas { display: block; width: 100%; height: 340px; }
 .sw-sec[open] .fold-hint { display: none; }
 .sw-sec > p { color: var(--ink2); max-width: 70ch; margin: 4px 0 0; }
 .sw-bar { display: flex; flex-wrap: wrap; gap: 10px 18px; align-items: center; margin-top: 12px; }
+.sw-sec > p.sw-note { margin: 12px 0 0; padding: 8px 12px; border: 1px solid var(--accent); border-radius: 4px; background: var(--accent-soft); color: var(--ink); max-width: none; text-wrap: balance; }
 .sw-grid { display: grid; gap: 16px; margin-top: 12px; }
 @media (min-width: 920px) { .sw-grid { grid-template-columns: 1fr 1fr; } }
 .sw-panel { border: 1px solid var(--line); border-radius: 4px; background: var(--panel); padding: 8px 10px 10px; }
@@ -337,6 +338,7 @@ h3.sec { font-family: var(--display); font-style: italic; font-weight: 600; font
       <option value="bk">Bare Knuckle colors</option>
     </select>
   </div>
+  <p class="sw-note"><b>Note:</b> The pot works like any standard pot. The switch board isn't connected to it; it's just the contacts for two switches that flip together when you push or pull the knob.</p>
   <div class="sw-grid">
     <div class="sw-panel">
       <h3>What you see in the cavity</h3>
@@ -405,7 +407,7 @@ h3.sec { font-family: var(--display); font-style: italic; font-weight: 600; font
     <p>The model has no eddy-current losses, so resonances (especially the cap-split bump) may look sharper than a real pickup's. Values marked as estimates should be replaced with measured ones. The model will be checked against a breadboard before it goes into the main simulator.</p>
   </details>
 </div>
-<footer>© 2026 G$ Luthier Services. All rights reserved. · Coil Split Lab preview, build 2026.11.17-2<br>CTS, Seymour Duncan, DiMarzio and Bare Knuckle are trademarks of their respective owners. G$ Luthier Services is not affiliated with or endorsed by any of them.</footer>
+<footer>© 2026 G$ Luthier Services. All rights reserved. · Coil Split Lab preview, build 2026.11.17-3<br>CTS, Seymour Duncan, DiMarzio and Bare Knuckle are trademarks of their respective owners. G$ Luthier Services is not affiliated with or endorsed by any of them.</footer>
 </div>
 <script>
 /* Guitar Tone Filter Simulator. (c) 2026 G$ Luthier Services. All rights reserved. Unauthorized copying or redistribution is prohibited. */
